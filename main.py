@@ -3,7 +3,11 @@ import sqlite3
 from discord.ext import commands, tasks
 from datetime import datetime
 import io
+import os
+
+import discord.ext.commands
 import clienttoken
+import discord.ext
 
 tiers = {1290084217157324890: "g",
          1290084262401409044: "fg",
@@ -559,8 +563,37 @@ class MainCog(commands.Cog):
         with io.open(f"saves/gdllbackup{datetime.today().strftime('%Y-%m-%d%H%M%S')}.sql", "w") as p:
             for line in connection.iterdump():
                 p.write('%s\n' % line)
+        connection.close()
 
-    
+    @commands.command(name="loadsave")
+    @commands.has_guild_permissions(administrator=True)
+    async def load_save(self, ctx, filename: str):
+
+        try:
+            with open(f"saves/{filename}", "r") as f:
+                queries = f.readlines()
+
+                try:
+                    os.remove("gdll.db")
+                except FileNotFoundError:
+                    print("[Debug] Database already deleted")
+
+                connection = sqlite3.connect("gdll.db")
+                c = connection.cursor()
+                for query in queries:
+
+                    c.execute(query)
+                connection.close()
+
+                await ctx.channel.send("**Backup** loaded __successfully__ !")
+
+        except discord.ext.commands.errors.MissingPermissions:
+            await ctx.channel.send("You are not **allowed** to use this __command__ !")
+
+        except FileNotFoundError:
+            await ctx.channel.send("Failed to **retrieve** data from __file__ ! (the file was not found)")
+
+
 class GDLL(commands.Bot):
     def __init__(self) -> None:
         super().__init__(command_prefix="ll!", intents=discord.Intents.all())
